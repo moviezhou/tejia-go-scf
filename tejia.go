@@ -10,6 +10,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
     "github.com/tencentyun/scf-go-lib/cloudfunction"
 )
 
@@ -21,6 +23,7 @@ const Region = "ap-chengdu"
 const Host = "https://tejia-1253927884.cos.ap-chengdu.myqcloud.com"
 const TmplPath = "https://tejia-1253927884.cos.ap-chengdu.myqcloud.com/web/templates/"
 const SCFTempPath = "/tmp/"
+
 
 type DefineEvent struct {
     // test event define
@@ -52,8 +55,8 @@ type Response struct{
     IsBase64 bool `json:"IsBase64"` 
     StatusCode uint32 `json:"statusCode"` 
     Headers map[string]string `json:"headers"` 
-    Body string `json:"body"` 
-    } 
+	Body string `json:"body"` 
+} 
 
 type Owner struct {
 	XMLName  xml.Name `xml:"Owner"`
@@ -125,11 +128,24 @@ func downloadFile(filePath string, url string) error {
 	return nil
 }
 
-
 func hello(ctx context.Context, event DefineEvent) (Response, error) {
 	fmt.Println("key1:", event)
 	fmt.Println(ctx)
 	fmt.Println("key2:", event.Key2)
+
+
+	db, err := sql.Open("mysql", "root:JsJs6773@tcp(cd-cdb-hhl9rz48.sql.tencentcdb.com:63394)/tejia?charset=utf8")
+	checkErr(err)
+
+	// insert
+	stmt, err := db.Prepare("INSERT userinfo SET username=?,departname=?,created=?")
+	checkErr(err)
+
+	res, err := stmt.Exec("Test", "X部门", "2018-12-28")
+	defer stmt.Close()
+	checkErr(err)
+	fmt.Println(res.RowsAffected())
+	defer db.Close()
 	
 	byteValue, _ := getXML(Host)
 	var objects ListBucketResult
@@ -145,7 +161,7 @@ func hello(ctx context.Context, event DefineEvent) (Response, error) {
 		ret.Headers = map[string]string{} 
 		ret.Headers["Content-Type"] = "text/html" 
 		ret.Body = "Template error."
-		return ret, nil 
+		return ret, nil
 	}
 
 	tmpl, err = tmpl.ParseFiles(SCFTempPath + "index.tmpl")
@@ -168,6 +184,12 @@ func hello(ctx context.Context, event DefineEvent) (Response, error) {
 	tmpl.Execute(&tpl, objects)
 	ret.Body = tpl.String()
     return ret, nil 
+}
+
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
