@@ -12,7 +12,8 @@ import (
 	"net/http"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
-    "github.com/tencentyun/scf-go-lib/cloudfunction"
+	"github.com/tencentyun/scf-go-lib/cloudfunction"
+	"cosutil"
 )
 
 const APPID = "1253927884"
@@ -147,7 +148,8 @@ func hello(ctx context.Context, event DefineEvent) (Response, error) {
 	fmt.Println(res.RowsAffected())
 	defer db.Close()
 	
-	byteValue, _ := getXML(Host)
+	url := Host + "?prefix=xitaihua_kjc"
+	byteValue, _ := getXML(url)
 	var objects ListBucketResult
 	
 	xml.Unmarshal(byteValue, &objects)
@@ -184,12 +186,6 @@ func hello(ctx context.Context, event DefineEvent) (Response, error) {
 	tmpl.Execute(&tpl, objects)
 	ret.Body = tpl.String()
     return ret, nil 
-}
-
-func checkErr(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
 
 func main() {
